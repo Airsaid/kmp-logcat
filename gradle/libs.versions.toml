@@ -13,6 +13,8 @@ runner = "1.7.0"
 core = "1.7.0"
 kotlinx-coroutines = "1.9.0"
 kotlinx-datetime = "0.6.1"
+vanniktech-maven-publish = "0.35.0"
+dokka = "2.1.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -32,3 +34,5 @@ androidLint = { id = "com.android.lint", version.ref = "agp" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+vanniktechMavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-maven-publish" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }

@@ -1,12 +1,19 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.konan.target.Family
+import com.vanniktech.maven.publish.KotlinMultiplatform
+import com.vanniktech.maven.publish.JavadocJar
 
 plugins {
   alias(libs.plugins.kotlinMultiplatform)
   alias(libs.plugins.androidKotlinMultiplatformLibrary)
   alias(libs.plugins.androidLint)
+  alias(libs.plugins.vanniktechMavenPublish)
+  alias(libs.plugins.dokka)
 }
+
+group = providers.gradleProperty("GROUP").get()
+version = providers.gradleProperty("VERSION_NAME").get()
 
 kotlin {
   compilerOptions {
@@ -78,4 +85,12 @@ kotlin {
       }
     }
   }
+}
+
+mavenPublishing {
+  configure(
+    KotlinMultiplatform(
+      javadocJar = JavadocJar.Dokka("dokkaGenerateHtml")
+    )
+  )
 }
