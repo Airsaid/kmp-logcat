@@ -1,0 +1,3 @@
+<resources>
+  <style name="Theme.KmpLogcat" parent="android:Theme.DeviceDefault.NoActionBar" />
+</resources>
