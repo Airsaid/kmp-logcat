@@ -6,7 +6,7 @@ GitHub Releases are synced from the changelog by CI.
 ## Prepare a release
 
 1. Bump `VERSION_NAME` in `gradle.properties`.
-2. Update the dependency snippet in `README.md` and `README.zh.md`.
+2. Ensure the dependency snippet in `README.md` and `README.zh.md` uses the `$version` placeholder (no version bump needed there).
 3. Move items from `Unreleased` into a new `## [x.y.z]` section in `CHANGELOG.md`.
 4. Commit and push the changes.
 

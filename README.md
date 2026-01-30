@@ -30,7 +30,7 @@ Add the dependency in `commonMain`:
 kotlin {
   sourceSets {
     commonMain.dependencies {
-      implementation("com.airsaid:logcat:0.1.0")
+      implementation("com.airsaid:logcat:$version")
     }
   }
 }
@@ -193,8 +193,8 @@ LogcatLogger.install(androidLogger, diskLogger)
 
 ## Changelog & releases
 
-- Changelog: `CHANGELOG.md`
-- Release process: `docs/releasing.md`
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
+- Release process: [docs/releasing.md](docs/releasing.md)
 
 ## Acknowledgements
 
@@ -203,4 +203,4 @@ LogcatLogger.install(androidLogger, diskLogger)
 
 ## License
 
-Apache-2.0. See `LICENSE`.
+Apache-2.0. See [LICENSE](LICENSE).

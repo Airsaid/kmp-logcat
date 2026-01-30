@@ -29,7 +29,7 @@
 kotlin {
   sourceSets {
     commonMain.dependencies {
-      implementation("com.airsaid:logcat:0.1.0")
+      implementation("com.airsaid:logcat:$version")
     }
   }
 }
@@ -191,8 +191,8 @@ LogcatLogger.install(androidLogger, diskLogger)
 
 ## 变更记录与发布
 
-- 变更记录：`CHANGELOG.md`
-- 发布流程：`docs/releasing.md`
+- 变更记录：[CHANGELOG.md](CHANGELOG.md)
+- 发布流程：[docs/releasing.md](docs/releasing.md)
 
 ## 致谢
 
@@ -201,4 +201,4 @@ LogcatLogger.install(androidLogger, diskLogger)
 
 ## License
 
-Apache-2.0. See `LICENSE`.
+Apache-2.0. See [LICENSE](LICENSE).
