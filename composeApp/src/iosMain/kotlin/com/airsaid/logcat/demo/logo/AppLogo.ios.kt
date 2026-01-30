@@ -5,12 +5,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.decodeToImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
-import org.jetbrains.skia.Image
 import platform.Foundation.NSBundle
 import platform.Foundation.NSData
 import platform.UIKit.UIImage
@@ -35,7 +34,7 @@ private fun loadAppLogoImageBitmap(): ImageBitmap? {
   val data = UIImagePNGRepresentation(image) ?: return null
   val bytes = data.toByteArray()
   if (bytes.isEmpty()) return null
-  return Image.makeFromEncoded(bytes).asImageBitmap()
+  return bytes.decodeToImageBitmap()
 }
 
 private fun loadAppLogoImage(): UIImage? {
