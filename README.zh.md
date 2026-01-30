@@ -7,17 +7,17 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.2.21-7F52FF.svg)
 
-一个轻量的 Kotlin Multiplatform（KMP）日志 API，支持惰性计算、可配置格式与磁盘日志，并能自动推断 tag。
+📝 一个轻量的 Kotlin Multiplatform（KMP）日志 API，支持惰性计算、可配置格式与磁盘日志，并能自动推断 tag。
 
 ## 特性
 
 - `logcat { }` 惰性执行：只有安装了 logger 且允许输出时才会计算消息。
 - 自动 tag：默认使用调用处类名；也可手动传入 tag。
-- 可插拔格式策略：
-  - `AndroidLogcatFormatStrategy` / `IosLogcatFormatStrategy`
-  - `PrettyFormatStrategy`（线程 + 调用栈）
-  - `NonFormatStrategy`（不做格式化）
-- 磁盘日志：缓冲写入、按大小滚动、按时间清理、动态最大文件大小。
+- 支持不同的格式化输出：
+  - `AndroidLogcatFormatStrategy` / `IosLogcatFormatStrategy`：平台风格控制台输出，字段可配置。
+  - `PrettyFormatStrategy`：带边框的输出，包含线程信息与调用栈。
+  - `NonFormatStrategy`：不做格式化，直接透传原始日志到 `LogStrategy`。
+- 磁盘日志支持写入日志到磁盘中，并提供缓冲写入、按大小滚动、按时间清理、动态最大文件大小。
 - 支持同时安装多个 logger。
 - `Throwable.asLog()` 便于输出堆栈信息。
 
@@ -32,6 +32,14 @@ kotlin {
       implementation("com.airsaid:logcat:0.1.0")
     }
   }
+}
+```
+
+确保已添加 Maven Central：
+
+```kotlin
+repositories {
+  mavenCentral()
 }
 ```
 
@@ -94,19 +102,19 @@ try {
 
 格式接近平台控制台输出，可切换字段：
 
-- `showTimeStamp(Boolean)`
-- `showProcessId(Boolean)`
-- `showThreadInfo(Boolean)`
-- `showTag(Boolean)`
-- `showLevel(Boolean)`
+- `showTimeStamp(Boolean)`：是否输出时间戳。
+- `showProcessId(Boolean)`：是否输出进程 id。
+- `showThreadInfo(Boolean)`：是否输出线程名称与 id。
+- `showTag(Boolean)`：是否输出 tag。
+- `showLevel(Boolean)`：是否输出日志级别。
 
 ### PrettyFormatStrategy
 
 带边框、线程信息、调用栈：
 
-- `showThreadInfo(Boolean)`
-- `methodCount(Int)`
-- `methodOffset(Int)`
+- `showThreadInfo(Boolean)`：是否输出线程信息。
+- `methodCount(Int)`：输出的调用栈行数。
+- `methodOffset(Int)`：调用栈偏移量。
 
 ### NonFormatStrategy
 
@@ -114,7 +122,7 @@ try {
 
 ## 磁盘日志
 
-磁盘日志由 `DiskLogStrategy` + `DiskLogger` 组成：
+磁盘日志由 `DiskLogStrategy` + `DiskLogger` 组成，支持写入日志到磁盘中：
 
 ```kotlin
 val diskStrategy = DiskLogStrategy.Builder()

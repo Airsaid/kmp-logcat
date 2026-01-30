@@ -7,18 +7,18 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.2.21-7F52FF.svg)
 
-A lightweight Kotlin Multiplatform (KMP) logging API with lazy evaluation, configurable
+📝 A lightweight Kotlin Multiplatform (KMP) logging API with lazy evaluation, configurable
 formatting, disk logging, and tag inference.
 
 ## Features
 
 - `logcat { }` is lazy: message blocks run only when a logger is installed and loggable.
 - Automatic tag from the call site class name (with an overload for explicit tags).
-- Pluggable format strategies:
-  - `AndroidLogcatFormatStrategy` / `IosLogcatFormatStrategy`
-  - `PrettyFormatStrategy` (thread + call stack)
-  - `NonFormatStrategy` (no formatting)
-- Disk logging with buffering, size rotation, time-based cleanup, and dynamic size limits.
+- Supports different formatted outputs:
+  - `AndroidLogcatFormatStrategy` / `IosLogcatFormatStrategy`: platform-style console output with configurable fields.
+  - `PrettyFormatStrategy`: bordered output with thread info and call stack.
+  - `NonFormatStrategy`: no formatting; forwards raw messages to the underlying `LogStrategy`.
+- Disk logging writes logs to disk with buffering, size rotation, time-based cleanup, and dynamic size limits.
 - Multiple loggers can be installed at the same time.
 - `Throwable.asLog()` for readable stack traces.
 
@@ -33,6 +33,14 @@ kotlin {
       implementation("com.airsaid:logcat:0.1.0")
     }
   }
+}
+```
+
+Make sure you have Maven Central:
+
+```kotlin
+repositories {
+  mavenCentral()
 }
 ```
 
@@ -95,19 +103,19 @@ Note: `logcat { }` is an `Any` extension. For top-level functions (no `this`), u
 
 Formats output similar to platform consoles. You can toggle fields:
 
-- `showTimeStamp(Boolean)`
-- `showProcessId(Boolean)`
-- `showThreadInfo(Boolean)`
-- `showTag(Boolean)`
-- `showLevel(Boolean)`
+- `showTimeStamp(Boolean)`: include/exclude the timestamp.
+- `showProcessId(Boolean)`: include/exclude the process id.
+- `showThreadInfo(Boolean)`: include/exclude thread name and id.
+- `showTag(Boolean)`: include/exclude the log tag.
+- `showLevel(Boolean)`: include/exclude the log priority.
 
 ### PrettyFormatStrategy
 
 Adds borders, thread info, and call stack lines:
 
-- `showThreadInfo(Boolean)`
-- `methodCount(Int)`
-- `methodOffset(Int)`
+- `showThreadInfo(Boolean)`: include/exclude thread info.
+- `methodCount(Int)`: number of call stack lines to print.
+- `methodOffset(Int)`: offset into the call stack.
 
 ### NonFormatStrategy
 
@@ -115,7 +123,7 @@ Bypasses formatting and delegates directly to the underlying `LogStrategy`.
 
 ## Disk logging
 
-Disk logging is provided by `DiskLogStrategy` + `DiskLogger`:
+Disk logging is provided by `DiskLogStrategy` + `DiskLogger` and supports writing logs to disk:
 
 ```kotlin
 val diskStrategy = DiskLogStrategy.Builder()
