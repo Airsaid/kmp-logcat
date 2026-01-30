@@ -28,5 +28,8 @@
 - Keep commits focused by module and behavior.
 - PRs should include: a short description, affected modules, and test results (commands + outcomes). For UI changes, add screenshots from Android and iOS.
 
+## Documentation Guidelines
+- When updating `README.md`, sync the same changes in other language variants (e.g., `README.zh.md`) to keep content aligned.
+
 ## Security & Configuration Tips
 - `local.properties` is intentionally ignored; it contains machine-specific paths like the Android SDK. Do not commit secrets, tokens, or signing configs.
