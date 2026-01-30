@@ -191,6 +191,11 @@ LogcatLogger.install(androidLogger, diskLogger)
   - iosArm64 / iosX64 / iosSimulatorArm64
 - Kotlin: 2.2.21
 
+## Changelog & releases
+
+- Changelog: `CHANGELOG.md`
+- Release process: `docs/releasing.md`
+
 ## Acknowledgements
 
 - square/logcat
