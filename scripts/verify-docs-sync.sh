@@ -25,7 +25,8 @@ if [[ "$gradle_version" != "$version" ]]; then
 fi
 
 for file in README.md README.zh.md; do
-  if ! rg_or_grep -q "com\\.airsaid:logcat:${version}" "$file"; then
+  pattern="com\\.airsaid:logcat:(\\\$version|${version})"
+  if ! rg_or_grep -q "$pattern" "$file"; then
     echo "Expected $file to reference version $version." >&2
     exit 1
   fi
