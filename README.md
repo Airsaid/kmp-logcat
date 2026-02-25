@@ -53,6 +53,10 @@ Android (e.g., Application.onCreate):
 ```kotlin
 val formatStrategy = AndroidLogcatFormatStrategy.Builder<AndroidLogcatLogStrategy>()
   .logStrategy(AndroidLogcatLogStrategy())
+  .timeStampPattern(
+    pattern = "uuuu-MM-dd HH:mm:ss.SSS",
+    timeZone = TimeZone.currentSystemDefault(),
+  )
   .build()
 
 AndroidLogcatLogger.install(
@@ -66,6 +70,10 @@ iOS (app startup):
 ```kotlin
 val formatStrategy = IosLogcatFormatStrategy.Builder<IosLogcatLogStrategy>()
   .logStrategy(IosLogcatLogStrategy())
+  .timeStampPattern(
+    pattern = "uuuu-MM-dd HH:mm:ss.SSS",
+    timeZone = TimeZone.currentSystemDefault(),
+  )
   .build()
 
 IosLogcatLogger.install(
@@ -104,10 +112,14 @@ Note: `logcat { }` is an `Any` extension. For top-level functions (no `this`), u
 Formats output similar to platform consoles. You can toggle fields:
 
 - `showTimeStamp(Boolean)`: include/exclude the timestamp.
+- `timeStampPattern(String, TimeZone)`: customize timestamp output with a Unicode pattern and timezone.
+- `timeStampFormatter((Instant) -> String)`: fully custom timestamp formatter.
 - `showProcessId(Boolean)`: include/exclude the process id.
 - `showThreadInfo(Boolean)`: include/exclude thread name and id.
 - `showTag(Boolean)`: include/exclude the log tag.
 - `showLevel(Boolean)`: include/exclude the log priority.
+
+By default, timestamp uses `Instant.toString()` (ISO-8601 UTC).
 
 ### PrettyFormatStrategy
 

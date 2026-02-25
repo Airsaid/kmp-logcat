@@ -1,6 +1,8 @@
 package com.airsaid.logcat
 
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
 import platform.Foundation.NSThread
 import platform.posix.getpid
 
@@ -15,12 +17,14 @@ class IosLogcatFormatStrategy<S : LogStrategy> private constructor(builder: Buil
   private val isShowThreadInfo = builder.isShowThreadInfo
   private val isShowTag = builder.isShowTag
   private val isShowLevel = builder.isShowLevel
+  private val timeStampFormatter = builder.timeStampFormatterBlock
   override val logStrategy: S = builder.logStrategyInstance
 
   override fun log(priority: LogPriority, tag: String, message: String) {
     val builder = StringBuilder().apply {
       if (isShowTimeStamp) {
-        append(Clock.System.now().toString())
+        val now = Clock.System.now()
+        append(TimestampFormatter.formatWithFallback(now, timeStampFormatter))
         append(SEPARATOR)
       }
       if (isShowProcessId) {
@@ -64,6 +68,8 @@ class IosLogcatFormatStrategy<S : LogStrategy> private constructor(builder: Buil
     internal var isShowThreadInfo = true
     internal var isShowTag = true
     internal var isShowLevel = true
+    internal var timeStampFormatterBlock: (Instant) -> String =
+      TimestampFormatter::defaultFormatter
 
     /**
      * Sets the log strategy to use to determine how to handler the formatted log message.
@@ -80,6 +86,30 @@ class IosLogcatFormatStrategy<S : LogStrategy> private constructor(builder: Buil
      * @param isShowTimeStamp `true` to show the time stamp, `false` otherwise.
      */
     fun showTimeStamp(isShowTimeStamp: Boolean) = apply { this.isShowTimeStamp = isShowTimeStamp }
+
+    /**
+     * Sets the timestamp format pattern.
+     *
+     * The pattern follows Unicode date pattern format.
+     * Example: `uuuu-MM-dd HH:mm:ss.SSS`.
+     *
+     * Default timezone is [TimeZone.currentSystemDefault].
+     */
+    fun timeStampPattern(
+      pattern: String,
+      timeZone: TimeZone = TimeZone.currentSystemDefault(),
+    ) = apply {
+      this.timeStampFormatterBlock = TimestampFormatter.patternFormatter(pattern, timeZone)
+    }
+
+    /**
+     * Sets a custom timestamp formatter.
+     *
+     * Default is [Instant.toString].
+     */
+    fun timeStampFormatter(timeStampFormatter: (Instant) -> String) = apply {
+      this.timeStampFormatterBlock = timeStampFormatter
+    }
 
     /**
      * Sets whether to show the process id in the log message.

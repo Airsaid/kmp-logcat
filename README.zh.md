@@ -52,6 +52,10 @@ Android（如 Application.onCreate 中初始化）：
 ```kotlin
 val formatStrategy = AndroidLogcatFormatStrategy.Builder<AndroidLogcatLogStrategy>()
   .logStrategy(AndroidLogcatLogStrategy())
+  .timeStampPattern(
+    pattern = "uuuu-MM-dd HH:mm:ss.SSS",
+    timeZone = TimeZone.currentSystemDefault(),
+  )
   .build()
 
 AndroidLogcatLogger.install(
@@ -65,6 +69,10 @@ iOS（应用启动时初始化）：
 ```kotlin
 val formatStrategy = IosLogcatFormatStrategy.Builder<IosLogcatLogStrategy>()
   .logStrategy(IosLogcatLogStrategy())
+  .timeStampPattern(
+    pattern = "uuuu-MM-dd HH:mm:ss.SSS",
+    timeZone = TimeZone.currentSystemDefault(),
+  )
   .build()
 
 IosLogcatLogger.install(
@@ -103,10 +111,14 @@ try {
 格式接近平台控制台输出，可切换字段：
 
 - `showTimeStamp(Boolean)`：是否输出时间戳。
+- `timeStampPattern(String, TimeZone)`：通过 Unicode pattern + 时区自定义时间戳格式。
+- `timeStampFormatter((Instant) -> String)`：完全自定义时间戳格式化逻辑。
 - `showProcessId(Boolean)`：是否输出进程 id。
 - `showThreadInfo(Boolean)`：是否输出线程名称与 id。
 - `showTag(Boolean)`：是否输出 tag。
 - `showLevel(Boolean)`：是否输出日志级别。
+
+默认时间戳格式为 `Instant.toString()`（ISO-8601 UTC）。
 
 ### PrettyFormatStrategy
 
