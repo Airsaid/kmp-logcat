@@ -71,5 +71,8 @@ android {
 }
 
 dependencies {
+  lintChecks(project(":logcat-lint")) {
+    isTransitive = false
+  }
   debugImplementation(compose.uiTooling)
 }
