@@ -7,7 +7,7 @@ package com.airsaid.logcat
 class DiskLogger(
   minPriority: LogPriority = LogPriority.WARN,
   private val formatStrategy: FormatStrategy<DiskLogStrategy>,
-) : LogcatLogger {
+) : CloseableLogcatLogger {
 
   private val minPriorityInt: Int = minPriority.priorityInt
 
@@ -22,6 +22,10 @@ class DiskLogger(
    */
   fun flush() {
     formatStrategy.logStrategy.flush()
+  }
+
+  override fun close() {
+    formatStrategy.logStrategy.close()
   }
 
   companion object {

@@ -33,10 +33,12 @@ class DiskLogStrategy private constructor(builder: Builder) : LogStrategy {
   private val lock = NSLock()
   private val bufferedLogs = ArrayList<BufferedLog>()
   private var bufferedSize = 0
+  private var isClosed = false
 
   override fun log(priority: LogPriority, tag: String, message: String) {
     lock.lock()
     try {
+      if (isClosed) return
       val size = messageSize(message)
       bufferedLogs.add(BufferedLog(priority, tag, message, size))
       bufferedSize += size
@@ -54,7 +56,22 @@ class DiskLogStrategy private constructor(builder: Builder) : LogStrategy {
   internal fun flush() {
     lock.lock()
     try {
+      if (isClosed) return
       flushBufferLocked()
+    } finally {
+      lock.unlock()
+    }
+  }
+
+  /**
+   * Flush buffered logs and stop accepting new logs.
+   */
+  internal fun close() {
+    lock.lock()
+    try {
+      if (isClosed) return
+      flushBufferLocked()
+      isClosed = true
     } finally {
       lock.unlock()
     }

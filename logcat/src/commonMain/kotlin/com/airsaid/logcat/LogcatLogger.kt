@@ -89,17 +89,26 @@ interface LogcatLogger {
      * @param logger the logger to uninstall.
      */
     fun uninstall(logger: LogcatLogger) {
+      var loggerToClose: LogcatLogger? = null
+      var wasInstalled = false
       platformSynchronized(lock) {
         if (isInstalledLocked(logger)) {
           loggers.removeAll { it === logger }
+          loggerToClose = logger
+          wasInstalled = true
         } else {
-          logger.log(
-            ERROR,
-            TAG,
-            "Logger $logger was not installed, ignoring this call."
-          )
+          wasInstalled = false
         }
         loggerArray = loggers.toTypedArray()
+      }
+      if (wasInstalled) {
+        closeIfNeeded(loggerToClose)
+      } else {
+        logger.log(
+          ERROR,
+          TAG,
+          "Logger $logger was not installed, ignoring this call."
+        )
       }
     }
 
@@ -107,13 +116,33 @@ interface LogcatLogger {
      * Uninstall all [LogcatLogger].
      */
     fun uninstallAll() {
+      var loggersToClose: List<LogcatLogger> = emptyList()
       platformSynchronized(lock) {
+        loggersToClose = loggers.toList()
         loggers.clear()
         loggerArray = emptyArray()
       }
+      loggersToClose.forEach(::closeIfNeeded)
     }
 
     private fun isInstalledLocked(logger: LogcatLogger): Boolean =
       loggers.any { it === logger }
+
+    private fun closeIfNeeded(logger: LogcatLogger?) {
+      if (logger is CloseableLogcatLogger) {
+        runCatching { logger.close() }
+      }
+    }
   }
+}
+
+/**
+ * A [LogcatLogger] with resources that should be released when uninstalled.
+ */
+interface CloseableLogcatLogger : LogcatLogger {
+
+  /**
+   * Flushes pending work and releases logger resources.
+   */
+  fun close()
 }

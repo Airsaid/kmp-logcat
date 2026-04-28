@@ -4,9 +4,9 @@ import android.util.Log
 import com.airsaid.logcat.internal.TAG
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -39,8 +39,10 @@ import java.util.concurrent.Executors
  */
 class DiskLogStrategy private constructor(builder: Builder) : LogStrategy {
 
-  private val singleDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
-  private val ioScope = CoroutineScope(SupervisorJob() + singleDispatcher)
+  private val executor = Executors.newSingleThreadExecutor()
+  private val singleDispatcher = executor.asCoroutineDispatcher()
+  private val parentJob = SupervisorJob()
+  private val ioScope = CoroutineScope(parentJob + singleDispatcher)
 
   private val directory = builder.directory
   private val fileGenerator = builder.fileGenerator
@@ -52,14 +54,26 @@ class DiskLogStrategy private constructor(builder: Builder) : LogStrategy {
   private val writeMutex = Mutex()
   private val bufferedLogs = ArrayList<BufferedLog>()
   private var bufferedSize = 0
+  private val closeLock = Any()
+
+  @Volatile
+  private var acceptsLogs = true
+
+  @Volatile
+  private var isClosed = false
+
+  private var crashHandler: CrashFlushHandler? = null
 
   init {
     installCrashHandler()
   }
 
   override fun log(priority: LogPriority, tag: String, message: String) {
-    ioScope.launch {
-      bufferAndMaybeWrite(priority, tag, message)
+    if (!acceptsLogs) return
+    runCatching {
+      ioScope.launch {
+        bufferAndMaybeWrite(priority, tag, message)
+      }
     }
   }
 
@@ -67,13 +81,34 @@ class DiskLogStrategy private constructor(builder: Builder) : LogStrategy {
    * Flush buffered logs to disk synchronously.
    */
   internal fun flush() {
+    if (isClosed) return
     runBlocking {
-      val parentJob = ioScope.coroutineContext[Job]
-      parentJob?.children?.toList()?.joinAll()
+      parentJob.children.toList().joinAll()
       withContext(singleDispatcher) {
         writeMutex.withLock {
           flushBufferLocked()
         }
+      }
+    }
+  }
+
+  /**
+   * Flush buffered logs and release resources.
+   */
+  internal fun close() {
+    synchronized(closeLock) {
+      if (isClosed || !acceptsLogs) return
+      acceptsLogs = false
+    }
+
+    try {
+      flush()
+    } finally {
+      parentJob.cancel()
+      singleDispatcher.close()
+      restoreCrashHandler()
+      synchronized(closeLock) {
+        isClosed = true
       }
     }
   }
@@ -151,7 +186,27 @@ class DiskLogStrategy private constructor(builder: Builder) : LogStrategy {
   private fun installCrashHandler() {
     val currentHandler = Thread.getDefaultUncaughtExceptionHandler()
     if (currentHandler is CrashFlushHandler && currentHandler.strategy === this) return
-    Thread.setDefaultUncaughtExceptionHandler(CrashFlushHandler(this, currentHandler))
+    val handler = CrashFlushHandler(this, currentHandler)
+    crashHandler = handler
+    Thread.setDefaultUncaughtExceptionHandler(handler)
+  }
+
+  private fun restoreCrashHandler() {
+    val handler = crashHandler ?: return
+    handler.strategy = null
+    if (Thread.getDefaultUncaughtExceptionHandler() === handler) {
+      Thread.setDefaultUncaughtExceptionHandler(handler.delegate.withoutClosedCrashHandlers())
+    }
+    crashHandler = null
+  }
+
+  private fun Thread.UncaughtExceptionHandler?.withoutClosedCrashHandlers():
+    Thread.UncaughtExceptionHandler? {
+    var handler = this
+    while (handler is CrashFlushHandler && handler.strategy == null) {
+      handler = handler.delegate
+    }
+    return handler
   }
 
   private fun deleteExpiredLogFiles(logFolder: File) {
@@ -257,12 +312,12 @@ class DiskLogStrategy private constructor(builder: Builder) : LogStrategy {
   )
 
   private class CrashFlushHandler(
-    val strategy: DiskLogStrategy,
-    private val delegate: Thread.UncaughtExceptionHandler?
+    var strategy: DiskLogStrategy?,
+    val delegate: Thread.UncaughtExceptionHandler?
   ) : Thread.UncaughtExceptionHandler {
     override fun uncaughtException(t: Thread, e: Throwable) {
       try {
-        strategy.flushBufferOnCrash()
+        strategy?.flushBufferOnCrash()
       } catch (ignored: Throwable) {
         // Ignore crash flush failures.
       }

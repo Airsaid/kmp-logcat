@@ -110,6 +110,31 @@ class LogcatLoggerInstallTest {
     assertEquals(0, second.count)
   }
 
+  @Test
+  fun uninstallClosesCloseableLogger() {
+    val logger = CloseableCountingLogger()
+
+    LogcatLogger.install(logger)
+    LogcatLogger.uninstall(logger)
+
+    assertEquals(1, logger.closeCount)
+  }
+
+  @Test
+  fun uninstallAllClosesCloseableLoggersAndClearsAllLoggers() {
+    val closeable = CloseableCountingLogger()
+    val regular = CountingLogger()
+
+    LogcatLogger.install(closeable, regular)
+    LogcatLogger.uninstallAll()
+
+    logcat("Test") { "message" }
+
+    assertEquals(1, closeable.closeCount)
+    assertEquals(0, closeable.count)
+    assertEquals(0, regular.count)
+  }
+
   private class CountingLogger : LogcatLogger {
     var count = 0
 
@@ -123,6 +148,19 @@ class LogcatLoggerInstallTest {
 
     override fun log(priority: LogPriority, tag: String, message: String) {
       count++
+    }
+  }
+
+  private class CloseableCountingLogger : CloseableLogcatLogger {
+    var count = 0
+    var closeCount = 0
+
+    override fun log(priority: LogPriority, tag: String, message: String) {
+      count++
+    }
+
+    override fun close() {
+      closeCount++
     }
   }
 }
