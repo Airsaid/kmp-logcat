@@ -6,11 +6,6 @@ package com.airsaid.logcat
 internal expect fun fullClassNameOf(target: Any): String
 
 /**
- * Returns a stable identity key for logger de-duplication across platforms.
- */
-internal expect fun loggerIdentityKeyOf(logger: LogcatLogger): String
-
-/**
  * Platform-specific lock used by [platformSynchronized].
  */
 internal expect class PlatformLock()

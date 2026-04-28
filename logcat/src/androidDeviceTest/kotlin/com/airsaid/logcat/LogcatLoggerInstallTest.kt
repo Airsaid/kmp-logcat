@@ -18,17 +18,28 @@ class LogcatLoggerInstallTest {
   }
 
   @Test
-  fun installsSameLoggerClassOnlyOnce() {
+  fun installsSameLoggerInstanceOnlyOnce() {
+    val logger = CountingLogger()
+
+    LogcatLogger.install(logger, logger)
+
+    val countAfterInstall = logger.count
+    logcat("Test") { "message" }
+
+    assertEquals(countAfterInstall + 1, logger.count)
+  }
+
+  @Test
+  fun installsSameLoggerClassInstancesTogether() {
     val first = CountingLogger()
     val second = CountingLogger()
 
     LogcatLogger.install(first, second)
 
-    val secondCountAfterInstall = second.count
     logcat("Test") { "message" }
 
     assertEquals(1, first.count)
-    assertEquals(secondCountAfterInstall, second.count)
+    assertEquals(1, second.count)
   }
 
   @Test
@@ -45,12 +56,25 @@ class LogcatLoggerInstallTest {
   }
 
   @Test
-  fun uninstallRemovesLoggerByClass() {
+  fun uninstallDoesNotRemoveSameClassDifferentInstance() {
     val installed = CountingLogger()
     val sameClass = CountingLogger()
 
     LogcatLogger.install(installed)
     LogcatLogger.uninstall(sameClass)
+
+    logcat("Test") { "message" }
+
+    assertEquals(1, installed.count)
+    assertEquals(1, sameClass.count)
+  }
+
+  @Test
+  fun uninstallRemovesLoggerInstance() {
+    val installed = CountingLogger()
+
+    LogcatLogger.install(installed)
+    LogcatLogger.uninstall(installed)
 
     logcat("Test") { "message" }
 

@@ -53,7 +53,7 @@ interface LogcatLogger {
     fun install(vararg loggers: LogcatLogger) {
       platformSynchronized(lock) {
         for (logger in loggers) {
-          if (!isInstalled(logger)) {
+          if (!isInstalledLocked(logger)) {
             this.loggers.add(logger)
           } else {
             logger.log(
@@ -75,8 +75,7 @@ interface LogcatLogger {
     fun isInstalled(logger: LogcatLogger): Boolean {
       var installed = false
       platformSynchronized(lock) {
-        val targetKey = identityKeyOf(logger)
-        installed = loggers.any { identityKeyOf(it) == targetKey }
+        installed = isInstalledLocked(logger)
       }
       return installed
     }
@@ -91,9 +90,8 @@ interface LogcatLogger {
      */
     fun uninstall(logger: LogcatLogger) {
       platformSynchronized(lock) {
-        if (isInstalled(logger)) {
-          val targetKey = identityKeyOf(logger)
-          loggers.removeAll { identityKeyOf(it) == targetKey }
+        if (isInstalledLocked(logger)) {
+          loggers.removeAll { it === logger }
         } else {
           logger.log(
             ERROR,
@@ -115,6 +113,7 @@ interface LogcatLogger {
       }
     }
 
-    private fun identityKeyOf(logger: LogcatLogger): String = loggerIdentityKeyOf(logger)
+    private fun isInstalledLocked(logger: LogcatLogger): Boolean =
+      loggers.any { it === logger }
   }
 }
