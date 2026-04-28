@@ -67,7 +67,7 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
       - name: Build logcat + demo (Android)
-        run: ./gradlew :logcat:assemble :logcat:testAndroidHostTest :logcat:lint :composeApp:assembleDebug -Pkotlin.native.ignoreDisabledTargets=true
+        run: ./gradlew :logcat-lint:test :logcat-lint:lint :logcat:assemble :logcat:testAndroidHostTest :logcat:lint :composeApp:lintDebug :composeApp:assembleDebug -Pkotlin.native.ignoreDisabledTargets=true
 
   ios:
     runs-on: macos-latest

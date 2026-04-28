@@ -94,3 +94,9 @@ mavenPublishing {
     )
   )
 }
+
+dependencies {
+  lintPublish(project(":logcat-lint")) {
+    isTransitive = false
+  }
+}
