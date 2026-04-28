@@ -24,7 +24,10 @@
 - Name tests with `*Test` suffix (e.g., `DiskLogStrategyBufferTest`).
 
 ## Commit & Pull Request Guidelines
-- Current history is minimal; follow an imperative, concise subject line (e.g., “Add logcat iOS strategy”).
+- Use an English, imperative, concise subject line.
+- Start the subject with a capital letter and do not end it with a period.
+- Do not use Conventional Commits prefixes such as `feat:`, `fix:`, or `refactor(scope):`.
+- Good examples: “Add Android logcat lint check”, “Remove demo app logo preview component”, “Support customizable timestamp formatting on Android and iOS”.
 - Keep commits focused by module and behavior.
 - PRs should include: a short description, affected modules, and test results (commands + outcomes). For UI changes, add screenshots from Android and iOS.
 
