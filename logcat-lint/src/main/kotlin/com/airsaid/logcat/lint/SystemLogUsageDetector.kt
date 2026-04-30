@@ -153,7 +153,7 @@ class SystemLogUsageDetector : Detector(), SourceCodeScanner {
       explanation = "kmp-logcat projects should route Android logs through the library `logcat` API so logging stays lazy, consistently formatted, and controlled by the installed loggers.",
       category = Category.CORRECTNESS,
       priority = 5,
-      severity = Severity.WARNING,
+      severity = Severity.ERROR,
       implementation = Implementation(
         SystemLogUsageDetector::class.java,
         Scope.JAVA_FILE_SCOPE

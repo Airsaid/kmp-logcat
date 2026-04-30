@@ -36,19 +36,19 @@ class SystemLogUsageDetectorTest : LintDetectorTest() {
       .run()
       .expect(
         """
-        src/test/pkg/test.kt:6: Warning: Use kmp-logcat's logcat API instead of android.util.Log. [LogcatSystemLogUsage]
+        src/test/pkg/test.kt:6: Error: Use kmp-logcat's logcat API instead of android.util.Log. [LogcatSystemLogUsage]
           Log.d(tag, msg)
               ~
-        src/test/pkg/test.kt:7: Warning: Use kmp-logcat's logcat API instead of android.util.Log. [LogcatSystemLogUsage]
+        src/test/pkg/test.kt:7: Error: Use kmp-logcat's logcat API instead of android.util.Log. [LogcatSystemLogUsage]
           android.util.Log.e(tag, msg, throwable)
                            ~
-        src/test/pkg/test.kt:8: Warning: Use kmp-logcat's logcat API instead of android.util.Log. [LogcatSystemLogUsage]
+        src/test/pkg/test.kt:8: Error: Use kmp-logcat's logcat API instead of android.util.Log. [LogcatSystemLogUsage]
           Log.wtf(tag, msg)
               ~~~
-        src/test/pkg/test.kt:9: Warning: Use kmp-logcat's logcat API instead of android.util.Log. [LogcatSystemLogUsage]
+        src/test/pkg/test.kt:9: Error: Use kmp-logcat's logcat API instead of android.util.Log. [LogcatSystemLogUsage]
           Log.println(Log.INFO, tag, msg)
               ~~~~~~~
-        0 errors, 4 warnings
+        4 errors, 0 warnings
         """
       )
       .expectFixDiffs(
@@ -107,10 +107,10 @@ class SystemLogUsageDetectorTest : LintDetectorTest() {
       .run()
       .expect(
         """
-        src/test/pkg/JavaSample.java:7: Warning: Use kmp-logcat's logcat API instead of android.util.Log. [LogcatSystemLogUsage]
+        src/test/pkg/JavaSample.java:7: Error: Use kmp-logcat's logcat API instead of android.util.Log. [LogcatSystemLogUsage]
             Log.d(tag, msg);
                 ~
-        0 errors, 1 warnings
+        1 errors, 0 warnings
         """
       )
       .expectFixDiffs("")
@@ -184,10 +184,10 @@ class SystemLogUsageDetectorTest : LintDetectorTest() {
       .run()
       .expect(
         """
-        src/test/pkg/test.kt:6: Warning: Use kmp-logcat's logcat API instead of android.util.Log. [LogcatSystemLogUsage]
+        src/test/pkg/test.kt:6: Error: Use kmp-logcat's logcat API instead of android.util.Log. [LogcatSystemLogUsage]
           Log.println(priority, tag, msg)
               ~~~~~~~
-        0 errors, 1 warnings
+        1 errors, 0 warnings
         """
       )
       .expectFixDiffs("")
@@ -212,10 +212,10 @@ class SystemLogUsageDetectorTest : LintDetectorTest() {
       .run()
       .expect(
         """
-        src/test/pkg/test.kt:6: Warning: Use kmp-logcat's logcat API instead of android.util.Log. [LogcatSystemLogUsage]
+        src/test/pkg/test.kt:6: Error: Use kmp-logcat's logcat API instead of android.util.Log. [LogcatSystemLogUsage]
           Log.w(tag, throwable)
               ~
-        0 errors, 1 warnings
+        1 errors, 0 warnings
         """
       )
       .expectFixDiffs("")
@@ -240,10 +240,10 @@ class SystemLogUsageDetectorTest : LintDetectorTest() {
       .run()
       .expect(
         """
-        src/test/pkg/test.kt:6: Warning: Use kmp-logcat's logcat API instead of android.util.Log. [LogcatSystemLogUsage]
+        src/test/pkg/test.kt:6: Error: Use kmp-logcat's logcat API instead of android.util.Log. [LogcatSystemLogUsage]
           Log.d(tag, msg, extra)
               ~
-        0 errors, 1 warnings
+        1 errors, 0 warnings
         """
       )
       .expectFixDiffs("")

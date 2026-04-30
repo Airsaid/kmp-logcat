@@ -107,11 +107,11 @@ try {
 ## Android lint 检查
 
 Android 产物会随包发布一个自定义 lint 检查，用来在应用代码直接调用
-`android.util.Log` 时给出警告。建议统一通过 kmp-logcat 输出日志，以保留惰性计算、
+`android.util.Log` 时给出错误。建议统一通过 kmp-logcat 输出日志，以保留惰性计算、
 统一格式化以及已安装 logger 的控制能力。
 
 ```kotlin
-// Warning: LogcatSystemLogUsage
+// Error: LogcatSystemLogUsage
 Log.d(tag, msg)
 
 // Quick fix
@@ -121,7 +121,7 @@ logcat(tag, LogPriority.DEBUG) { msg }
 在可以安全转换的情况下，Throwable 重载也会提供 quick fix：
 
 ```kotlin
-// Warning: LogcatSystemLogUsage
+// Error: LogcatSystemLogUsage
 Log.e(tag, msg, throwable)
 
 // Quick fix
@@ -132,7 +132,7 @@ logcat(tag, LogPriority.ERROR) { msg + "\n" + throwable.asLog() }
 实现会按设计使用 `android.util.Log`。
 
 如果你的应用确实需要直接使用平台日志，可以通过 `@SuppressLint("LogcatSystemLogUsage")`
-或 `lint.xml` 配置压制该警告。
+或 `lint.xml` 配置压制该错误。
 
 ## 格式策略
 

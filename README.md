@@ -107,12 +107,12 @@ Note: `logcat { }` is an `Any` extension. For top-level functions (no `this`), u
 
 ## Android lint checks
 
-The Android artifact ships with a custom lint check that warns when app code calls
+The Android artifact ships with a custom lint check that errors when app code calls
 `android.util.Log` directly. Prefer routing logs through kmp-logcat so messages stay lazy,
 consistently formatted, and controlled by the installed loggers.
 
 ```kotlin
-// Warning: LogcatSystemLogUsage
+// Error: LogcatSystemLogUsage
 Log.d(tag, msg)
 
 // Quick fix
@@ -122,7 +122,7 @@ logcat(tag, LogPriority.DEBUG) { msg }
 Throwable overloads are also supported when they can be safely converted:
 
 ```kotlin
-// Warning: LogcatSystemLogUsage
+// Error: LogcatSystemLogUsage
 Log.e(tag, msg, throwable)
 
 // Quick fix
@@ -132,7 +132,7 @@ logcat(tag, LogPriority.ERROR) { msg + "\n" + throwable.asLog() }
 This lint check only runs for Android lint. It does not affect common or iOS source sets.
 The library's own Android implementation uses `android.util.Log` internally by design.
 
-If direct platform logging is intentional in your app, suppress the warning with
+If direct platform logging is intentional in your app, suppress the error with
 `@SuppressLint("LogcatSystemLogUsage")` or configure the issue in `lint.xml`.
 
 ## Format strategies
