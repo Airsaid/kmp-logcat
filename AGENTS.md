@@ -24,10 +24,11 @@
 - Name tests with `*Test` suffix (e.g., `DiskLogStrategyBufferTest`).
 
 ## Commit & Pull Request Guidelines
-- Use an English, imperative, concise subject line.
-- Start the subject with a capital letter and do not end it with a period.
-- Do not use Conventional Commits prefixes such as `feat:`, `fix:`, or `refactor(scope):`.
-- Good examples: “Add Android logcat lint check”, “Remove demo app logo preview component”, “Support customizable timestamp formatting on Android and iOS”.
+- Use Conventional Commits so Release Please can determine release versions.
+- `fix:` triggers a patch release, `feat:` triggers a minor release, and `!` or a `BREAKING CHANGE:` footer triggers a breaking release.
+- `docs:`, `test:`, `ci:`, and `chore:` do not trigger a release by default.
+- Use a `Release-As: x.y.z` footer when a PR must force a specific release version.
+- Keep each PR focused and ensure the squash merge title keeps the Conventional Commits prefix.
 - Keep commits focused by module and behavior.
 - PRs should include: a short description, affected modules, and test results (commands + outcomes). For UI changes, add screenshots from Android and iOS.
 
