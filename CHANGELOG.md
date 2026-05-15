@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0]
 - Support multiple logger instances, allowing independent configuration and lifecycle management.
 - Add disk logger lifecycle management: properly close disk loggers when uninstalled.
-- Add Android logcat lint checks for API compliance and best practices.
+- Add Android logcat lint checks that report direct `android.util.Log` usage as errors.
 - Support customizable timestamp formatting on Android and iOS platforms.
 - Fix iOS bitmap decoding for logo rendering.
 - Improve README documentation with clarity and formatting updates.
