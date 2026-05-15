@@ -1,0 +1,57 @@
+name: Release Please
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  release-please:
+    runs-on: macos-14
+
+    steps:
+      - name: Run Release Please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Checkout release
+        if: ${{ steps.release.outputs.release_created }}
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.release.outputs.tag_name }}
+
+      - name: Set up JDK
+        if: ${{ steps.release.outputs.release_created }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Cache Gradle
+        if: ${{ steps.release.outputs.release_created }}
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Verify release docs
+        if: ${{ steps.release.outputs.release_created }}
+        run: ./scripts/verify-docs-sync.sh "${{ steps.release.outputs.version }}"
+
+      - name: Publish to Maven Central
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_IN_MEMORY_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
+        run: ./gradlew :logcat:publishAllPublicationsToMavenCentralRepository

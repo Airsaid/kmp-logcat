@@ -1,24 +1,41 @@
 # Releasing
 
-This project uses `CHANGELOG.md` as the single source of truth for release notes.
-GitHub Releases are synced from the changelog by CI.
+This project uses Release Please to manage version bumps, changelog entries,
+GitHub Releases, and Maven Central publishing.
 
-## Prepare a release
+## Commit messages
 
-1. Bump `VERSION_NAME` in `gradle.properties`.
-2. Ensure the dependency snippet in `README.md` and `README.zh.md` uses the `$version` placeholder (no version bump needed there).
-3. Move items from `Unreleased` into a new `## [x.y.z]` section in `CHANGELOG.md`.
-4. Commit and push the changes.
+Release Please reads Conventional Commits merged into `main`.
+
+- `fix:` triggers a patch release.
+- `feat:` triggers a minor release.
+- `feat!`, `fix!`, or a `BREAKING CHANGE:` footer triggers a breaking release.
+- `docs:`, `test:`, `ci:`, and `chore:` do not trigger a release by default.
+- Add a `Release-As: x.y.z` footer to force a specific version when needed.
+
+When using squash merge, make sure the final squash title keeps the Conventional
+Commits prefix.
+
+## Release pull request
+
+After releasable changes land on `main`, the Release Please workflow creates or
+updates a release pull request. The release pull request updates:
+
+- `CHANGELOG.md`
+- `gradle.properties`
+- `version.txt`
+- `.release-please-manifest.json`
+
+Do not manually edit those files for a normal release. Review and merge the
+Release Please pull request when you are ready to publish.
 
 ## Publish
 
-1. Create a GitHub Release with tag `vX.Y.Z` (tag must match `VERSION_NAME`).
-2. CI will:
-   - verify the changelog + README versions,
-   - publish artifacts to Maven Central,
-   - sync the GitHub Release notes from `CHANGELOG.md`.
+Merging the Release Please pull request creates the `vX.Y.Z` tag and GitHub
+Release. The same workflow then verifies the README dependency snippets and
+publishes `:logcat` artifacts to Maven Central.
 
-## Manual publish (optional)
+## Manual retry
 
-If you need to publish without creating a GitHub Release, run the Publish workflow
-from Actions and pass the version. Release notes will not be updated in this mode.
+If the workflow fails for infrastructure reasons, rerun the failed Release Please
+workflow from GitHub Actions after fixing the underlying issue.
