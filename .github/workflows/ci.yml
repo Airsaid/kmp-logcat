@@ -85,4 +85,4 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
       - name: Build logcat + demo (iOS)
-        run: ./gradlew :logcat:compileKotlinIosArm64 :logcat:compileKotlinIosX64 :logcat:compileKotlinIosSimulatorArm64 :composeApp:compileKotlinIosSimulatorArm64
+        run: ./gradlew :logcat:compileKotlinIosArm64 :logcat:compileKotlinIosX64 :logcat:compileKotlinIosSimulatorArm64 :logcat:iosSimulatorArm64Test :composeApp:compileKotlinIosSimulatorArm64

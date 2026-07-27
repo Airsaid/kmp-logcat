@@ -50,19 +50,18 @@ repositories {
 Android（如 Application.onCreate 中初始化）：
 
 ```kotlin
-val formatStrategy = AndroidLogcatFormatStrategy.Builder<AndroidLogcatLogStrategy>()
-  .logStrategy(AndroidLogcatLogStrategy())
-  .timeStampPattern(
-    pattern = "uuuu-MM-dd HH:mm:ss.SSS",
-    timeZone = TimeZone.currentSystemDefault(),
-  )
-  .build()
-
 AndroidLogcatLogger.installOnDebuggableApp(
   application = this,
   minPriority = LogPriority.DEBUG,
-  formatStrategy = formatStrategy,
-)
+) {
+  AndroidLogcatFormatStrategy.Builder<AndroidLogcatLogStrategy>()
+    .logStrategy(AndroidLogcatLogStrategy())
+    .timeStampPattern(
+      pattern = "uuuu-MM-dd HH:mm:ss.SSS",
+      timeZone = TimeZone.currentSystemDefault(),
+    )
+    .build()
+}
 ```
 
 `installOnDebuggableApp` 会在应用不可调试时跳过安装。只有明确需要在不可调试构建中输出
@@ -71,19 +70,23 @@ Logcat 日志时，才使用 `AndroidLogcatLogger.install`。
 iOS（应用启动时初始化）：
 
 ```kotlin
-val formatStrategy = IosLogcatFormatStrategy.Builder<IosLogcatLogStrategy>()
-  .logStrategy(IosLogcatLogStrategy())
-  .timeStampPattern(
-    pattern = "uuuu-MM-dd HH:mm:ss.SSS",
-    timeZone = TimeZone.currentSystemDefault(),
-  )
-  .build()
-
 IosLogcatLogger.install(
   minPriority = LogPriority.DEBUG,
-  formatStrategy = formatStrategy,
-)
+) {
+  IosLogcatFormatStrategy.Builder<IosLogcatLogStrategy>()
+    .logStrategy(IosLogcatLogStrategy())
+    .timeStampPattern(
+      pattern = "uuuu-MM-dd HH:mm:ss.SSS",
+      timeZone = TimeZone.currentSystemDefault(),
+    )
+    .build()
+}
 ```
+
+便捷安装方法具有幂等性，并使用内部私有安装 key。第一次成功调用的配置生效；之后的调用会
+复用已安装的 logger，不会执行新的工厂。需要修改配置时，应先卸载现有 logger（完整重置日志
+系统时也可调用 `LogcatLogger.uninstallAll()`），再重新安装。需要安装多个独立配置的同类型
+logger 时，请显式构造实例并使用 `LogcatLogger.install(...)`。
 
 `IosLogcatLogStrategy()` 默认将动态统一日志内容标记为私密。仅当日志确定不包含敏感信息时，
 才显式选择公开输出：
@@ -178,18 +181,23 @@ logcat(tag, LogPriority.ERROR) { msg + "\n" + throwable.asLog() }
 磁盘日志由 `DiskLogStrategy` + `DiskLogger` 组成，支持写入日志到磁盘中：
 
 ```kotlin
-val diskStrategy = DiskLogStrategy.Builder()
-  .logFileDirectory(logDirectory)
-  .logFileGenerator(DefaultLogFileGenerator())
-  .logFileMaxSize(1024L * 1024L * 100L) // 100MB
-  .logFileMaxTime(7L * 24L * 60L * 60L * 1000L) // 7 days
-  .logFileMaxSizeResolver(AvailableSpaceLogFileMaxSizeResolver())
-  .logBufferMaxSize(10 * 1024) // 10K chars
-  .build()
-
-val formatStrategy = NonFormatStrategy(diskStrategy)
-DiskLogger.installOnApp(LogPriority.WARN, formatStrategy)
+val diskLogger = DiskLogger.installOnApp(minPriority = LogPriority.WARN) {
+  NonFormatStrategy(
+    DiskLogStrategy.Builder()
+      .logFileDirectory(logDirectory)
+      .logFileGenerator(DefaultLogFileGenerator())
+      .logFileMaxSize(1024L * 1024L * 100L) // 100MB
+      .logFileMaxTime(7L * 24L * 60L * 60L * 1000L) // 7 days
+      .logFileMaxSizeResolver(AvailableSpaceLogFileMaxSizeResolver())
+      .logBufferMaxSize(10 * 1024) // 10K chars
+      .build()
+  )
+}
 ```
+
+请确保 `DiskLogStrategy.Builder().build()` 位于工厂内部。旧的 eager
+`installOnApp(minPriority, formatStrategy)` 重载已废弃，仅为二进制兼容而保留；传给该重载
+的 strategy 会在方法判定重复安装前就完成资源分配，因此无法避免创建未使用的资源。
 
 Builder 参数说明：
 
@@ -209,8 +217,6 @@ Builder 参数说明：
 手动 flush：
 
 ```kotlin
-val diskLogger = DiskLogger(LogPriority.WARN, NonFormatStrategy(diskStrategy))
-LogcatLogger.install(diskLogger)
 // ...
 diskLogger.flush()
 ```
@@ -226,7 +232,11 @@ val androidLogger = AndroidLogcatLogger(
 )
 val diskLogger = DiskLogger(
   minPriority = LogPriority.WARN,
-  formatStrategy = NonFormatStrategy(diskStrategy)
+  formatStrategy = NonFormatStrategy(
+    DiskLogStrategy.Builder()
+      .logFileDirectory(logDirectory)
+      .build()
+  )
 )
 
 LogcatLogger.install(androidLogger, diskLogger)

@@ -4,7 +4,9 @@ import android.app.Application
 import android.content.pm.ApplicationInfo
 import androidx.test.core.app.ApplicationProvider
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -51,6 +53,49 @@ class AndroidLogcatLoggerInstallTest {
       AndroidLogcatLogger.install(formatStrategy = createFormatStrategy())
 
       assertTrue(LogcatLogger.loggerArray.any { it is AndroidLogcatLogger })
+    }
+  }
+
+  @Test
+  fun install_repeatedCallsKeepFirstLogger() {
+    AndroidLogcatLogger.install(formatStrategy = createFormatStrategy())
+    val first = LogcatLogger.loggerArray.single { it is AndroidLogcatLogger }
+
+    AndroidLogcatLogger.install(formatStrategy = createFormatStrategy())
+
+    assertEquals(1, LogcatLogger.loggerArray.count { it is AndroidLogcatLogger })
+    assertSame(first, LogcatLogger.loggerArray.single { it is AndroidLogcatLogger })
+  }
+
+  @Test
+  fun install_factoryRunsOnlyForFirstInstallation() {
+    var factoryCalls = 0
+
+    val first = AndroidLogcatLogger.install {
+      factoryCalls++
+      createFormatStrategy()
+    }
+    val second = AndroidLogcatLogger.install {
+      factoryCalls++
+      createFormatStrategy()
+    }
+
+    assertEquals(1, factoryCalls)
+    assertSame(first, second)
+  }
+
+  @Test
+  fun installOnDebuggableApp_doesNotRunFactoryForNonDebuggableApplication() {
+    withDebuggableFlag(enabled = false) { application ->
+      var factoryCalls = 0
+
+      val logger = AndroidLogcatLogger.installOnDebuggableApp(application) {
+        factoryCalls++
+        createFormatStrategy()
+      }
+
+      assertEquals(0, factoryCalls)
+      assertEquals(null, logger)
     }
   }
 

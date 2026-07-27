@@ -31,13 +31,33 @@ class DiskLogger(
   }
 
   companion object {
+    private val installationKey = LoggerInstallationKey<DiskLogger>()
+
+    /**
+     * Installs the application-wide disk logger if it has not already been installed.
+     *
+     * [formatStrategyFactory] is evaluated only for the first installation. Build the
+     * [DiskLogStrategy] inside the factory so repeated calls do not allocate disk logging
+     * resources.
+     */
     fun installOnApp(
       minPriority: LogPriority = LogPriority.WARN,
-      formatStrategy: FormatStrategy<DiskLogStrategy>
-    ) {
-      val androidDiskLogger = DiskLogger(minPriority, formatStrategy)
-      if (!LogcatLogger.isInstalled(androidDiskLogger)) {
-        LogcatLogger.install(androidDiskLogger)
+      formatStrategyFactory: () -> FormatStrategy<DiskLogStrategy>,
+    ): DiskLogger =
+      LogcatLogger.installIfAbsent(installationKey) {
+        DiskLogger(minPriority, formatStrategyFactory())
+      }
+
+    @Deprecated(
+      message = "Build the format strategy lazily with the formatStrategyFactory overload.",
+      level = DeprecationLevel.WARNING,
+    )
+    fun installOnApp(
+      minPriority: LogPriority = LogPriority.WARN,
+      formatStrategy: FormatStrategy<DiskLogStrategy>,
+    ): Unit {
+      LogcatLogger.installIfAbsent(installationKey) {
+        DiskLogger(minPriority, formatStrategy)
       }
     }
   }

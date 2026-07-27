@@ -37,6 +37,7 @@ interface LogcatLogger {
   companion object {
     private val lock = PlatformLock()
     private val loggers: MutableList<LogcatLogger> = mutableListOf()
+    private val keyedLoggers: MutableMap<LoggerInstallationKey<*>, LogcatLogger> = mutableMapOf()
 
     @PublishedApi
     @kotlin.concurrent.Volatile
@@ -45,8 +46,9 @@ interface LogcatLogger {
     /**
      * Installs one or more [LogcatLogger].
      *
-     * It is an error to call [install] more than once without calling [uninstall] in between,
-     * however doing this won't throw, it'll log an error to the newly provided logger.
+     * It is an error to install the same logger instance more than once without calling [uninstall]
+     * in between. Doing this won't throw; it logs an error to the duplicated logger instead.
+     * Different instances of the same logger class may be installed together.
      *
      * @param loggers the logger list to install.
      */
@@ -64,6 +66,34 @@ interface LogcatLogger {
           }
         }
         loggerArray = this.loggers.toTypedArray()
+      }
+    }
+
+    /**
+     * Installs the logger created by [loggerFactory] when no logger is associated with [key].
+     *
+     * The key lookup, logger creation, and installation are performed atomically. Repeated calls
+     * with the same key return the first installed logger without invoking [loggerFactory] again.
+     * Uninstalling that logger, or calling [uninstallAll], releases the key for reuse.
+     *
+     * [loggerFactory] must only create the logger and must not modify the logger registry.
+     */
+    internal fun <T : LogcatLogger> installIfAbsent(
+      key: LoggerInstallationKey<T>,
+      loggerFactory: () -> T,
+    ): T = platformSynchronized(lock) {
+      val installedLogger = keyedLoggers[key]
+      if (installedLogger != null) {
+        @Suppress("UNCHECKED_CAST")
+        (installedLogger as T)
+      } else {
+        val logger = loggerFactory()
+        if (!isInstalledLocked(logger)) {
+          loggers.add(logger)
+          loggerArray = loggers.toTypedArray()
+        }
+        keyedLoggers[key] = logger
+        logger
       }
     }
 
@@ -94,6 +124,7 @@ interface LogcatLogger {
       platformSynchronized(lock) {
         if (isInstalledLocked(logger)) {
           loggers.removeAll { it === logger }
+          keyedLoggers.entries.removeAll { it.value === logger }
           loggerToClose = logger
           wasInstalled = true
         } else {
@@ -120,6 +151,7 @@ interface LogcatLogger {
       platformSynchronized(lock) {
         loggersToClose = loggers.toList()
         loggers.clear()
+        keyedLoggers.clear()
         loggerArray = emptyArray()
       }
       loggersToClose.forEach(::closeIfNeeded)
@@ -135,6 +167,11 @@ interface LogcatLogger {
     }
   }
 }
+
+/**
+ * Identity-based key for an internal logger installation slot.
+ */
+internal class LoggerInstallationKey<T : LogcatLogger>
 
 /**
  * A [LogcatLogger] with resources that should be released when uninstalled.

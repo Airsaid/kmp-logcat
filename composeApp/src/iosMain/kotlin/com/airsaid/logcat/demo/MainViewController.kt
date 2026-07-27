@@ -8,12 +8,11 @@ import com.airsaid.logcat.NonFormatStrategy
 import platform.UIKit.UIViewController
 
 fun MainViewController(): UIViewController {
-  val formatStrategy = NonFormatStrategy(IosLogcatLogStrategy())
-
   IosLogcatLogger.install(
     minPriority = LogPriority.DEBUG,
-    formatStrategy = formatStrategy,
-  )
+  ) {
+    NonFormatStrategy(IosLogcatLogStrategy())
+  }
 
   return ComposeUIViewController { App() }
 }

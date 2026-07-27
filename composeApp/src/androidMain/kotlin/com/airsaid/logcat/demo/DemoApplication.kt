@@ -10,11 +10,11 @@ class DemoApplication : Application() {
   override fun onCreate() {
     super.onCreate()
 
-    val formatStrategy = NonFormatStrategy(AndroidLogcatLogStrategy())
     AndroidLogcatLogger.installOnDebuggableApp(
       application = this,
       minPriority = LogPriority.DEBUG,
-      formatStrategy = formatStrategy,
-    )
+    ) {
+      NonFormatStrategy(AndroidLogcatLogStrategy())
+    }
   }
 }

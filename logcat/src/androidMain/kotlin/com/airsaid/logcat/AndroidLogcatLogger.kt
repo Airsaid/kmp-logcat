@@ -62,10 +62,44 @@ class AndroidLogcatLogger(
       minPriority: LogPriority = DEBUG,
       formatStrategy: FormatStrategy<AndroidLogcatLogStrategy>,
     ) {
-      val androidLogcatLogger = AndroidLogcatLogger(minPriority, formatStrategy)
-      if (!LogcatLogger.isInstalled(androidLogcatLogger)) {
-        LogcatLogger.install(androidLogcatLogger)
+      LogcatLogger.installIfAbsent(installationKey) {
+        AndroidLogcatLogger(minPriority, formatStrategy)
       }
     }
+
+    /**
+     * Installs an [AndroidLogcatLogger] in all build types, creating its format strategy only when
+     * no logger has already been installed through this convenience API.
+     *
+     * The first successful installation remains active until it is uninstalled. Later calls return
+     * that logger without evaluating [formatStrategyFactory].
+     *
+     * @param minPriority the minimum priority to log.
+     * @param formatStrategyFactory creates the strategy for the first installation.
+     * @return the newly installed logger, or the logger installed by an earlier convenience call.
+     */
+    fun install(
+      minPriority: LogPriority = DEBUG,
+      formatStrategyFactory: () -> FormatStrategy<AndroidLogcatLogStrategy>,
+    ): AndroidLogcatLogger = LogcatLogger.installIfAbsent(installationKey) {
+      AndroidLogcatLogger(minPriority, formatStrategyFactory())
+    }
+
+    /**
+     * Installs an [AndroidLogcatLogger] only when [application] is debuggable, creating its format
+     * strategy only for the first successful installation.
+     *
+     * @return the active convenience-installed logger, or `null` when the app is not debuggable.
+     */
+    fun installOnDebuggableApp(
+      application: Application,
+      minPriority: LogPriority = DEBUG,
+      formatStrategyFactory: () -> FormatStrategy<AndroidLogcatLogStrategy>,
+    ): AndroidLogcatLogger? {
+      if (!application.isDebuggableApp) return null
+      return install(minPriority, formatStrategyFactory)
+    }
+
+    private val installationKey = LoggerInstallationKey<AndroidLogcatLogger>()
   }
 }

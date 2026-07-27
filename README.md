@@ -51,19 +51,18 @@ repositories {
 Android (e.g., Application.onCreate):
 
 ```kotlin
-val formatStrategy = AndroidLogcatFormatStrategy.Builder<AndroidLogcatLogStrategy>()
-  .logStrategy(AndroidLogcatLogStrategy())
-  .timeStampPattern(
-    pattern = "uuuu-MM-dd HH:mm:ss.SSS",
-    timeZone = TimeZone.currentSystemDefault(),
-  )
-  .build()
-
 AndroidLogcatLogger.installOnDebuggableApp(
   application = this,
   minPriority = LogPriority.DEBUG,
-  formatStrategy = formatStrategy,
-)
+) {
+  AndroidLogcatFormatStrategy.Builder<AndroidLogcatLogStrategy>()
+    .logStrategy(AndroidLogcatLogStrategy())
+    .timeStampPattern(
+      pattern = "uuuu-MM-dd HH:mm:ss.SSS",
+      timeZone = TimeZone.currentSystemDefault(),
+    )
+    .build()
+}
 ```
 
 `installOnDebuggableApp` skips installation when the application is not debuggable. Use
@@ -72,19 +71,24 @@ AndroidLogcatLogger.installOnDebuggableApp(
 iOS (app startup):
 
 ```kotlin
-val formatStrategy = IosLogcatFormatStrategy.Builder<IosLogcatLogStrategy>()
-  .logStrategy(IosLogcatLogStrategy())
-  .timeStampPattern(
-    pattern = "uuuu-MM-dd HH:mm:ss.SSS",
-    timeZone = TimeZone.currentSystemDefault(),
-  )
-  .build()
-
 IosLogcatLogger.install(
   minPriority = LogPriority.DEBUG,
-  formatStrategy = formatStrategy,
-)
+) {
+  IosLogcatFormatStrategy.Builder<IosLogcatLogStrategy>()
+    .logStrategy(IosLogcatLogStrategy())
+    .timeStampPattern(
+      pattern = "uuuu-MM-dd HH:mm:ss.SSS",
+      timeZone = TimeZone.currentSystemDefault(),
+    )
+    .build()
+}
 ```
+
+Convenience installers are idempotent and use a private installation key. The first successful
+call wins; later calls reuse the installed logger without evaluating their factory. To change its
+configuration, uninstall the existing logger first (or call `LogcatLogger.uninstallAll()` during a
+full logging reset), then install it again. To install multiple independently configured loggers of
+the same type, construct them explicitly and use `LogcatLogger.install(...)`.
 
 `IosLogcatLogStrategy()` marks dynamic unified log content as private by default. To make logs
 publicly readable, opt in only when messages are known not to contain sensitive data:
@@ -179,18 +183,24 @@ Bypasses formatting and delegates directly to the underlying `LogStrategy`.
 Disk logging is provided by `DiskLogStrategy` + `DiskLogger` and supports writing logs to disk:
 
 ```kotlin
-val diskStrategy = DiskLogStrategy.Builder()
-  .logFileDirectory(logDirectory)
-  .logFileGenerator(DefaultLogFileGenerator())
-  .logFileMaxSize(1024L * 1024L * 100L) // 100MB
-  .logFileMaxTime(7L * 24L * 60L * 60L * 1000L) // 7 days
-  .logFileMaxSizeResolver(AvailableSpaceLogFileMaxSizeResolver())
-  .logBufferMaxSize(10 * 1024) // 10K chars
-  .build()
-
-val formatStrategy = NonFormatStrategy(diskStrategy)
-DiskLogger.installOnApp(LogPriority.WARN, formatStrategy)
+val diskLogger = DiskLogger.installOnApp(minPriority = LogPriority.WARN) {
+  NonFormatStrategy(
+    DiskLogStrategy.Builder()
+      .logFileDirectory(logDirectory)
+      .logFileGenerator(DefaultLogFileGenerator())
+      .logFileMaxSize(1024L * 1024L * 100L) // 100MB
+      .logFileMaxTime(7L * 24L * 60L * 60L * 1000L) // 7 days
+      .logFileMaxSizeResolver(AvailableSpaceLogFileMaxSizeResolver())
+      .logBufferMaxSize(10 * 1024) // 10K chars
+      .build()
+  )
+}
 ```
+
+Keep `DiskLogStrategy.Builder().build()` inside the factory. The eager
+`installOnApp(minPriority, formatStrategy)` overload is deprecated and retained for binary
+compatibility, but a strategy passed to it has already allocated its resources before duplicate
+installation can be detected.
 
 Builder options:
 
@@ -211,8 +221,6 @@ Builder options:
 Manual flush:
 
 ```kotlin
-val diskLogger = DiskLogger(LogPriority.WARN, NonFormatStrategy(diskStrategy))
-LogcatLogger.install(diskLogger)
 // ...
 diskLogger.flush()
 ```
@@ -228,7 +236,11 @@ val androidLogger = AndroidLogcatLogger(
 )
 val diskLogger = DiskLogger(
   minPriority = LogPriority.WARN,
-  formatStrategy = NonFormatStrategy(diskStrategy)
+  formatStrategy = NonFormatStrategy(
+    DiskLogStrategy.Builder()
+      .logFileDirectory(logDirectory)
+      .build()
+  )
 )
 
 LogcatLogger.install(androidLogger, diskLogger)

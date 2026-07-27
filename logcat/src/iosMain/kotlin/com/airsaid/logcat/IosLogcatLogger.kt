@@ -25,10 +25,29 @@ class IosLogcatLogger(
       minPriority: LogPriority = DEBUG,
       formatStrategy: FormatStrategy<IosLogcatLogStrategy>,
     ) {
-      val iosLogcatLogger = IosLogcatLogger(minPriority, formatStrategy)
-      if (!LogcatLogger.isInstalled(iosLogcatLogger)) {
-        LogcatLogger.install(iosLogcatLogger)
+      LogcatLogger.installIfAbsent(installationKey) {
+        IosLogcatLogger(minPriority, formatStrategy)
       }
     }
+
+    /**
+     * Installs an [IosLogcatLogger], creating its format strategy only when no logger has already
+     * been installed through this convenience API.
+     *
+     * The first successful installation remains active until it is uninstalled. Later calls return
+     * that logger without evaluating [formatStrategyFactory].
+     *
+     * @param minPriority the minimum priority to log.
+     * @param formatStrategyFactory creates the strategy for the first installation.
+     * @return the newly installed logger, or the logger installed by an earlier convenience call.
+     */
+    fun install(
+      minPriority: LogPriority = DEBUG,
+      formatStrategyFactory: () -> FormatStrategy<IosLogcatLogStrategy>,
+    ): IosLogcatLogger = LogcatLogger.installIfAbsent(installationKey) {
+      IosLogcatLogger(minPriority, formatStrategyFactory())
+    }
+
+    private val installationKey = LoggerInstallationKey<IosLogcatLogger>()
   }
 }

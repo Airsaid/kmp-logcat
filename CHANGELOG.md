@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Make convenience logger installation idempotent through keyed lazy factories, preventing duplicate
+  output and avoiding creation of unused disk logging resources.
 - Add `AndroidLogcatLogger.installOnDebuggableApp` to skip logcat installation for non-debuggable apps.
 - Make iOS unified log content private by default, with explicit `IosLogcatPrivacy.PUBLIC` opt-in.
 
