@@ -16,8 +16,12 @@ logcat_os_log_t logcat_darwin_log_create(const char *subsystem, const char *cate
     return os_log_create(subsystem, category);
 }
 
-void logcat_darwin_log_with_type(logcat_os_log_t log, os_log_type_t type, const char *msg) {
-    os_log_with_type((os_log_t)log, type, "%s", msg);
+/**
+ * Uses format specifier %{private}s to redact dynamic log content by default.
+ * We cannot pass the format specifier from Kotlin, as the API requires the value to be a string constant.
+ */
+void logcat_darwin_log_private_with_type(logcat_os_log_t log, os_log_type_t type, const char *msg) {
+    os_log_with_type((os_log_t)log, type, "%{private}s", msg);
 }
 
 /**

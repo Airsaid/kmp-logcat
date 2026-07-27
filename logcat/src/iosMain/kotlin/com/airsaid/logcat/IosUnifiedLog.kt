@@ -3,14 +3,20 @@
 package com.airsaid.logcat
 
 import com.airsaid.logcat.darwin.logcat_darwin_log_create
+import com.airsaid.logcat.darwin.logcat_darwin_log_private_with_type
 import com.airsaid.logcat.darwin.logcat_darwin_log_public_with_type
-import com.airsaid.logcat.darwin.logcat_darwin_log_with_type
 import platform.darwin.OS_LOG_TYPE_DEBUG
 import platform.darwin.OS_LOG_TYPE_DEFAULT
 import platform.darwin.OS_LOG_TYPE_ERROR
 import platform.darwin.OS_LOG_TYPE_FAULT
 import platform.darwin.OS_LOG_TYPE_INFO
 import platform.darwin.os_log_type_t
+
+internal typealias IosUnifiedLogWriter = (
+  type: os_log_type_t,
+  text: String,
+  privacy: IosLogcatPrivacy,
+) -> Unit
 
 /**
  * Shared iOS logger that routes through os_log and enforces byte-sized truncation.
@@ -20,31 +26,59 @@ internal object IosUnifiedLog {
   private const val MAX_LOG_BYTES = 1024
   private const val SUBSYSTEM = "com.airsaid.logcat"
   private const val CATEGORY = "logcat"
-  private const val PUBLIC_LOGGING = true
 
   private val logger = logcat_darwin_log_create(SUBSYSTEM, CATEGORY)!!
-  private val darwinLogFn: (osLogSeverity: os_log_type_t, message: String) -> Unit =
-    if (PUBLIC_LOGGING) {
-      { osLogSeverity, message -> logcat_darwin_log_public_with_type(logger, osLogSeverity, message) }
-    } else {
-      { osLogSeverity, message -> logcat_darwin_log_with_type(logger, osLogSeverity, message) }
-    }
 
-  fun log(priority: LogPriority, tag: String, message: String) {
+  fun log(
+    priority: LogPriority,
+    tag: String,
+    message: String,
+    privacy: IosLogcatPrivacy,
+  ) {
     val type = mapLogType(priority)
     val text = "${priority.priorityLetter}/$tag: $message"
-    logText(type, text)
+    logText(type, text, privacy)
   }
 
-  fun logError(tag: String, message: String) {
+  fun logError(
+    tag: String,
+    message: String,
+    writer: IosUnifiedLogWriter = ::logText,
+  ) {
     val text = "E/$tag: $message"
-    logText(OS_LOG_TYPE_ERROR, text)
+    writer(OS_LOG_TYPE_ERROR, text, IosLogcatPrivacy.PRIVATE)
   }
 
-  private fun logText(type: os_log_type_t, text: String) {
+  private fun logText(
+    type: os_log_type_t,
+    text: String,
+    privacy: IosLogcatPrivacy,
+  ) {
+    splitAndWriteLog(type, text, privacy, ::writeDarwinLog)
+  }
+
+  internal fun splitAndWriteLog(
+    type: os_log_type_t,
+    text: String,
+    privacy: IosLogcatPrivacy,
+    writer: IosUnifiedLogWriter,
+  ) {
     val parts = splitByUtf8Bytes(text, MAX_LOG_BYTES)
     for (part in parts) {
-      darwinLogFn(type, part)
+      writer(type, part, privacy)
+    }
+  }
+
+  private fun writeDarwinLog(
+    type: os_log_type_t,
+    text: String,
+    privacy: IosLogcatPrivacy,
+  ) {
+    when (privacy) {
+      IosLogcatPrivacy.PRIVATE ->
+        logcat_darwin_log_private_with_type(logger, type, text)
+      IosLogcatPrivacy.PUBLIC ->
+        logcat_darwin_log_public_with_type(logger, type, text)
     }
   }
 

@@ -11,7 +11,8 @@ class DemoApplication : Application() {
     super.onCreate()
 
     val formatStrategy = NonFormatStrategy(AndroidLogcatLogStrategy())
-    AndroidLogcatLogger.install(
+    AndroidLogcatLogger.installOnDebuggableApp(
+      application = this,
       minPriority = LogPriority.DEBUG,
       formatStrategy = formatStrategy,
     )

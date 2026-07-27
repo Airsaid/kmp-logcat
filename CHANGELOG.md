@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Add `AndroidLogcatLogger.installOnDebuggableApp` to skip logcat installation for non-debuggable apps.
+- Make iOS unified log content private by default, with explicit `IosLogcatPrivacy.PUBLIC` opt-in.
+
 ## [0.2.0]
 - Support multiple logger instances, allowing independent configuration and lifecycle management.
 - Add disk logger lifecycle management: properly close disk loggers when uninstalled.

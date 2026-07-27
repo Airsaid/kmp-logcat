@@ -59,11 +59,15 @@ val formatStrategy = AndroidLogcatFormatStrategy.Builder<AndroidLogcatLogStrateg
   )
   .build()
 
-AndroidLogcatLogger.install(
+AndroidLogcatLogger.installOnDebuggableApp(
+  application = this,
   minPriority = LogPriority.DEBUG,
   formatStrategy = formatStrategy,
 )
 ```
+
+`installOnDebuggableApp` skips installation when the application is not debuggable. Use
+`AndroidLogcatLogger.install` only when logcat output in non-debuggable builds is intentional.
 
 iOS (app startup):
 
@@ -80,6 +84,13 @@ IosLogcatLogger.install(
   minPriority = LogPriority.DEBUG,
   formatStrategy = formatStrategy,
 )
+```
+
+`IosLogcatLogStrategy()` marks dynamic unified log content as private by default. To make logs
+publicly readable, opt in only when messages are known not to contain sensitive data:
+
+```kotlin
+IosLogcatLogStrategy(IosLogcatPrivacy.PUBLIC)
 ```
 
 ### 2) Log messages

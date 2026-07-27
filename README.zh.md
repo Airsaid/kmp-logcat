@@ -58,11 +58,15 @@ val formatStrategy = AndroidLogcatFormatStrategy.Builder<AndroidLogcatLogStrateg
   )
   .build()
 
-AndroidLogcatLogger.install(
+AndroidLogcatLogger.installOnDebuggableApp(
+  application = this,
   minPriority = LogPriority.DEBUG,
   formatStrategy = formatStrategy,
 )
 ```
+
+`installOnDebuggableApp` 会在应用不可调试时跳过安装。只有明确需要在不可调试构建中输出
+Logcat 日志时，才使用 `AndroidLogcatLogger.install`。
 
 iOS（应用启动时初始化）：
 
@@ -79,6 +83,13 @@ IosLogcatLogger.install(
   minPriority = LogPriority.DEBUG,
   formatStrategy = formatStrategy,
 )
+```
+
+`IosLogcatLogStrategy()` 默认将动态统一日志内容标记为私密。仅当日志确定不包含敏感信息时，
+才显式选择公开输出：
+
+```kotlin
+IosLogcatLogStrategy(IosLogcatPrivacy.PUBLIC)
 ```
 
 ### 2) 输出日志
