@@ -218,6 +218,11 @@ Builder options:
 - `logBufferMaxSize(Int)`
   - Buffer size (chars) before flushing to disk (default 10K).
 
+Disk log calls are queued on a private serial background worker. Threshold-based flushes do not
+perform directory traversal or file writes on the calling thread, and accepted logs are processed
+in submission order. `flush()` and `close()` synchronously wait for previously accepted logs to be
+written, so avoid calling them frequently from the main thread.
+
 Manual flush:
 
 ```kotlin

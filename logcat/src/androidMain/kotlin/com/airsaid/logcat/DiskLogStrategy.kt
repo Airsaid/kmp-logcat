@@ -3,19 +3,18 @@ package com.airsaid.logcat
 import android.util.Log
 import com.airsaid.logcat.internal.TAG
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileWriter
 import java.io.IOException
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 
 /**
@@ -55,12 +54,9 @@ class DiskLogStrategy private constructor(builder: Builder) : LogStrategy {
   private val bufferedLogs = ArrayList<BufferedLog>()
   private var bufferedSize = 0
   private val closeLock = Any()
-
-  @Volatile
-  private var acceptsLogs = true
-
-  @Volatile
-  private var isClosed = false
+  private var state = State.OPEN
+  private var closeJob: Job? = null
+  private var closeCompletion: CountDownLatch? = null
 
   private var crashHandler: CrashFlushHandler? = null
 
@@ -69,10 +65,12 @@ class DiskLogStrategy private constructor(builder: Builder) : LogStrategy {
   }
 
   override fun log(priority: LogPriority, tag: String, message: String) {
-    if (!acceptsLogs) return
-    runCatching {
-      ioScope.launch {
-        bufferAndMaybeWrite(priority, tag, message)
+    synchronized(closeLock) {
+      if (state != State.OPEN) return
+      runCatching {
+        ioScope.launch {
+          bufferAndMaybeWrite(priority, tag, message)
+        }
       }
     }
   }
@@ -81,50 +79,98 @@ class DiskLogStrategy private constructor(builder: Builder) : LogStrategy {
    * Flush buffered logs to disk synchronously.
    */
   internal fun flush() {
-    if (isClosed) return
-    runBlocking {
-      parentJob.children.toList().joinAll()
-      withContext(singleDispatcher) {
-        writeMutex.withLock {
-          flushBufferLocked()
-        }
+    val operation = synchronized(closeLock) {
+      when (state) {
+        State.OPEN -> FlushOperation(
+          job = ioScope.launch {
+            writeMutex.withLock {
+              flushBufferLocked()
+            }
+          },
+        )
+        State.CLOSING -> FlushOperation(completion = checkNotNull(closeCompletion))
+        State.CLOSED -> null
+      }
+    } ?: return
+
+    operation.job?.let { job ->
+      runBlocking {
+        job.join()
       }
     }
+    operation.completion?.await()
   }
 
   /**
    * Flush buffered logs and release resources.
    */
   internal fun close() {
-    synchronized(closeLock) {
-      if (isClosed || !acceptsLogs) return
-      acceptsLogs = false
+    val operation = synchronized(closeLock) {
+      when (state) {
+        State.OPEN -> {
+          state = State.CLOSING
+          val completion = CountDownLatch(1)
+          val job = ioScope.launch {
+            writeMutex.withLock {
+              flushBufferLocked()
+            }
+          }
+          closeJob = job
+          closeCompletion = completion
+          CloseOperation(job, completion, ownsCleanup = true)
+        }
+        State.CLOSING -> CloseOperation(
+          job = checkNotNull(closeJob),
+          completion = checkNotNull(closeCompletion),
+          ownsCleanup = false,
+        )
+        State.CLOSED -> null
+      }
+    } ?: return
+
+    if (!operation.ownsCleanup) {
+      operation.completion.await()
+      return
     }
 
     try {
-      flush()
+      runBlocking {
+        operation.job.join()
+      }
     } finally {
-      parentJob.cancel()
-      singleDispatcher.close()
-      restoreCrashHandler()
-      synchronized(closeLock) {
-        isClosed = true
+      try {
+        synchronized(closeLock) {
+          if (state == State.CLOSING) {
+            try {
+              parentJob.cancel()
+              singleDispatcher.close()
+              restoreCrashHandler()
+            } finally {
+              state = State.CLOSED
+            }
+          }
+        }
+      } finally {
+        operation.completion.countDown()
       }
     }
   }
 
-  private suspend fun bufferAndMaybeWrite(priority: LogPriority, tag: String, message: String) =
-    withContext(Dispatchers.IO) {
-      writeMutex.withLock {
-        val size = messageSize(message)
-        bufferedLogs.add(BufferedLog(priority, tag, message, size))
-        bufferedSize += size
+  private suspend fun bufferAndMaybeWrite(
+    priority: LogPriority,
+    tag: String,
+    message: String,
+  ) {
+    writeMutex.withLock {
+      val size = messageSize(message)
+      bufferedLogs.add(BufferedLog(priority, tag, message, size))
+      bufferedSize += size
 
-        if (bufferedSize >= bufferMaxSize) {
-          flushBufferLocked()
-        }
+      if (bufferedSize >= bufferMaxSize) {
+        flushBufferLocked()
       }
     }
+  }
 
   private fun flushBufferLocked() {
     if (bufferedLogs.isEmpty()) return
@@ -310,6 +356,23 @@ class DiskLogStrategy private constructor(builder: Builder) : LogStrategy {
     val message: String,
     val size: Int,
   )
+
+  private data class FlushOperation(
+    val job: Job? = null,
+    val completion: CountDownLatch? = null,
+  )
+
+  private data class CloseOperation(
+    val job: Job,
+    val completion: CountDownLatch,
+    val ownsCleanup: Boolean,
+  )
+
+  private enum class State {
+    OPEN,
+    CLOSING,
+    CLOSED,
+  }
 
   private class CrashFlushHandler(
     var strategy: DiskLogStrategy?,

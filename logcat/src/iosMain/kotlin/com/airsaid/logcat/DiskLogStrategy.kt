@@ -8,12 +8,18 @@ package com.airsaid.logcat
 import com.airsaid.logcat.internal.TAG
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
+import platform.Foundation.NSCondition
 import platform.Foundation.NSDate
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSFileModificationDate
 import platform.Foundation.NSFileType
 import platform.Foundation.NSFileTypeDirectory
-import platform.Foundation.NSLock
+import platform.darwin.DISPATCH_TIME_FOREVER
+import platform.darwin.dispatch_async
+import platform.darwin.dispatch_queue_create
+import platform.darwin.dispatch_semaphore_create
+import platform.darwin.dispatch_semaphore_signal
+import platform.darwin.dispatch_semaphore_wait
 import platform.posix.fclose
 import platform.posix.fopen
 import platform.posix.fwrite
@@ -30,23 +36,26 @@ class DiskLogStrategy private constructor(builder: Builder) : LogStrategy {
   private val maxTime = builder.maxTime
   private val bufferMaxSize = builder.bufferMaxSize
 
-  private val lock = NSLock()
+  private val ioQueue = dispatch_queue_create(IO_QUEUE_LABEL, null)
+  private val lifecycleCondition = NSCondition()
   private val bufferedLogs = ArrayList<BufferedLog>()
   private var bufferedSize = 0
-  private var isClosed = false
+  private var state = State.OPEN
 
   override fun log(priority: LogPriority, tag: String, message: String) {
-    lock.lock()
+    lifecycleCondition.lock()
     try {
-      if (isClosed) return
+      if (state != State.OPEN) return
       val size = messageSize(message)
-      bufferedLogs.add(BufferedLog(priority, tag, message, size))
-      bufferedSize += size
-      if (bufferedSize >= bufferMaxSize) {
-        flushBufferLocked()
+      dispatch_async(ioQueue) {
+        runCatching {
+          bufferAndMaybeWrite(BufferedLog(priority, tag, message, size))
+        }.onFailure { error ->
+          IosUnifiedLog.logError(TAG, "Write log to disk failed. $error")
+        }
       }
     } finally {
-      lock.unlock()
+      lifecycleCondition.unlock()
     }
   }
 
@@ -54,12 +63,37 @@ class DiskLogStrategy private constructor(builder: Builder) : LogStrategy {
    * Flush buffered logs to disk synchronously.
    */
   internal fun flush() {
-    lock.lock()
+    val completion = dispatch_semaphore_create(0)
+    var shouldWaitForFlush = false
+
+    lifecycleCondition.lock()
     try {
-      if (isClosed) return
-      flushBufferLocked()
+      when (state) {
+        State.OPEN -> {
+          shouldWaitForFlush = true
+          dispatch_async(ioQueue) {
+            try {
+              flushBuffer()
+            } catch (error: Throwable) {
+              IosUnifiedLog.logError(TAG, "Write log to disk failed. $error")
+            } finally {
+              dispatch_semaphore_signal(completion)
+            }
+          }
+        }
+        State.CLOSING -> {
+          while (state == State.CLOSING) {
+            lifecycleCondition.wait()
+          }
+        }
+        State.CLOSED -> Unit
+      }
     } finally {
-      lock.unlock()
+      lifecycleCondition.unlock()
+    }
+
+    if (shouldWaitForFlush) {
+      dispatch_semaphore_wait(completion, DISPATCH_TIME_FOREVER)
     }
   }
 
@@ -67,17 +101,48 @@ class DiskLogStrategy private constructor(builder: Builder) : LogStrategy {
    * Flush buffered logs and stop accepting new logs.
    */
   internal fun close() {
-    lock.lock()
+    lifecycleCondition.lock()
     try {
-      if (isClosed) return
-      flushBufferLocked()
-      isClosed = true
+      when (state) {
+        State.OPEN -> {
+          state = State.CLOSING
+          dispatch_async(ioQueue) {
+            try {
+              flushBuffer()
+            } catch (error: Throwable) {
+              IosUnifiedLog.logError(TAG, "Write log to disk failed. $error")
+            } finally {
+              lifecycleCondition.lock()
+              try {
+                state = State.CLOSED
+                lifecycleCondition.broadcast()
+              } finally {
+                lifecycleCondition.unlock()
+              }
+            }
+          }
+        }
+        State.CLOSING -> Unit
+        State.CLOSED -> return
+      }
+
+      while (state != State.CLOSED) {
+        lifecycleCondition.wait()
+      }
     } finally {
-      lock.unlock()
+      lifecycleCondition.unlock()
     }
   }
 
-  private fun flushBufferLocked() {
+  private fun bufferAndMaybeWrite(log: BufferedLog) {
+    bufferedLogs.add(log)
+    bufferedSize += log.size
+    if (bufferedSize >= bufferMaxSize) {
+      flushBuffer()
+    }
+  }
+
+  private fun flushBuffer() {
     if (bufferedLogs.isEmpty()) return
 
     val fileManager = NSFileManager.defaultManager
@@ -247,4 +312,14 @@ class DiskLogStrategy private constructor(builder: Builder) : LogStrategy {
     val message: String,
     val size: Int,
   )
+
+  private enum class State {
+    OPEN,
+    CLOSING,
+    CLOSED,
+  }
+
+  private companion object {
+    private const val IO_QUEUE_LABEL = "com.airsaid.logcat.disk"
+  }
 }
