@@ -58,10 +58,12 @@ inline fun Any.logcat(
   tag: String? = null,
   message: () -> String
 ) {
+  var evaluatedMessage: String? = null
   for (logger in LogcatLogger.loggerArray) {
     if (logger.isLoggable(priority)) {
       val tagOrCaller = tag ?: outerClassSimpleNameInternalOnlyDoNotUseKThxBye()
-      logger.log(priority, tagOrCaller, message())
+      val messageValue = evaluatedMessage ?: message().also { evaluatedMessage = it }
+      logger.log(priority, tagOrCaller, messageValue)
     }
   }
 }
@@ -76,10 +78,12 @@ inline fun logcat(
   priority: LogPriority = DEBUG,
   message: () -> String
 ) {
+  var evaluatedMessage: String? = null
   for (logger in LogcatLogger.loggerArray) {
     with(logger) {
       if (isLoggable(priority)) {
-        log(priority, tag, message())
+        val messageValue = evaluatedMessage ?: message().also { evaluatedMessage = it }
+        log(priority, tag, messageValue)
       }
     }
   }
