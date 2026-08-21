@@ -82,6 +82,45 @@ class LogcatLoggerInstallIfAbsentTest {
   }
 
   @Test
+  fun directCloseReleasesKeyForReuse() {
+    val key = LoggerInstallationKey<CloseableCountingLogger>()
+    val first = LogcatLogger.installIfAbsent(key) { CloseableCountingLogger() }
+
+    first.close()
+
+    val second = LogcatLogger.installIfAbsent(key) { CloseableCountingLogger() }
+
+    assertNotSame(first, second)
+    assertEquals(1, first.closeCount)
+    assertEquals(0, LogcatLogger.loggerArray.count { it === first })
+    assertEquals(1, LogcatLogger.loggerArray.count { it === second })
+  }
+
+  @Test
+  fun repeatedCloseCallsReleaseResourcesOnlyOnce() {
+    val logger = CloseableCountingLogger()
+
+    logger.close()
+    logger.close()
+
+    assertEquals(1, logger.closeCount)
+  }
+
+  @Test
+  fun closeFailureStillReleasesKeyForReuse() {
+    val key = LoggerInstallationKey<FailingCloseableLogger>()
+    val first = LogcatLogger.installIfAbsent(key) { FailingCloseableLogger(shouldFail = true) }
+
+    assertFailsWith<IllegalStateException> { first.close() }
+
+    val second = LogcatLogger.installIfAbsent(key) {
+      FailingCloseableLogger(shouldFail = false)
+    }
+    assertNotSame(first, second)
+    assertEquals(1, LogcatLogger.loggerArray.count { it === second })
+  }
+
+  @Test
   fun factoryFailureDoesNotReserveKey() {
     val key = LoggerInstallationKey<CountingLogger>()
 
@@ -115,6 +154,26 @@ class LogcatLoggerInstallIfAbsentTest {
 
     override fun log(priority: LogPriority, tag: String, message: String) {
       count++
+    }
+  }
+
+  private class CloseableCountingLogger : CloseableLogcatLogger() {
+    var closeCount = 0
+
+    override fun log(priority: LogPriority, tag: String, message: String) = Unit
+
+    override fun closeResources() {
+      closeCount++
+    }
+  }
+
+  private class FailingCloseableLogger(
+    private val shouldFail: Boolean,
+  ) : CloseableLogcatLogger() {
+    override fun log(priority: LogPriority, tag: String, message: String) = Unit
+
+    override fun closeResources() {
+      if (shouldFail) error("close failed")
     }
   }
 }

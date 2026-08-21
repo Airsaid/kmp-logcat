@@ -151,7 +151,7 @@ class LogcatLoggerInstallTest {
     }
   }
 
-  private class CloseableCountingLogger : CloseableLogcatLogger {
+  private class CloseableCountingLogger : CloseableLogcatLogger() {
     var count = 0
     var closeCount = 0
 
@@ -159,7 +159,7 @@ class LogcatLoggerInstallTest {
       count++
     }
 
-    override fun close() {
+    override fun closeResources() {
       closeCount++
     }
   }

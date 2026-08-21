@@ -195,9 +195,8 @@ val diskLogger = DiskLogger.installOnApp(minPriority = LogPriority.WARN) {
 }
 ```
 
-请确保 `DiskLogStrategy.Builder().build()` 位于工厂内部。旧的 eager
-`installOnApp(minPriority, formatStrategy)` 重载已废弃，仅为二进制兼容而保留；传给该重载
-的 strategy 会在方法判定重复安装前就完成资源分配，因此无法避免创建未使用的资源。
+请确保 `DiskLogStrategy.Builder().build()` 位于工厂内部，以避免重复安装时创建未使用的
+磁盘日志资源。
 
 Builder 参数说明：
 

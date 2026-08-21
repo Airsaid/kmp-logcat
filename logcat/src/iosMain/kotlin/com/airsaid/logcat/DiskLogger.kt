@@ -1,5 +1,7 @@
 package com.airsaid.logcat
 
+import platform.Foundation.NSCondition
+
 /**
  * A [logcat] logger that delegates to [DiskLogStrategy] for any log with a priority of
  * at least [minPriorityInt], and is otherwise a no-op.
@@ -7,7 +9,7 @@ package com.airsaid.logcat
 class DiskLogger(
   minPriority: LogPriority = LogPriority.WARN,
   private val formatStrategy: FormatStrategy<DiskLogStrategy>,
-) : CloseableLogcatLogger {
+) : CloseableLogcatLogger() {
 
   private val minPriorityInt: Int = minPriority.priorityInt
 
@@ -24,7 +26,7 @@ class DiskLogger(
     formatStrategy.logStrategy.flush()
   }
 
-  override fun close() {
+  override fun closeResources() {
     formatStrategy.logStrategy.close()
   }
 
@@ -46,17 +48,31 @@ class DiskLogger(
         DiskLogger(minPriority, formatStrategyFactory())
       }
 
-    @Deprecated(
-      message = "Build the format strategy lazily with the formatStrategyFactory overload.",
-      level = DeprecationLevel.WARNING,
-    )
-    fun installOnApp(
-      minPriority: LogPriority = LogPriority.WARN,
-      formatStrategy: FormatStrategy<DiskLogStrategy>,
-    ): Unit {
-      LogcatLogger.installIfAbsent(installationKey) {
-        DiskLogger(minPriority, formatStrategy)
+  }
+}
+
+internal actual class CloseCompletion {
+  private val condition = NSCondition()
+  private var completed = false
+
+  actual fun await() {
+    condition.lock()
+    try {
+      while (!completed) {
+        condition.wait()
       }
+    } finally {
+      condition.unlock()
+    }
+  }
+
+  actual fun complete() {
+    condition.lock()
+    try {
+      completed = true
+      condition.broadcast()
+    } finally {
+      condition.unlock()
     }
   }
 }

@@ -197,10 +197,8 @@ val diskLogger = DiskLogger.installOnApp(minPriority = LogPriority.WARN) {
 }
 ```
 
-Keep `DiskLogStrategy.Builder().build()` inside the factory. The eager
-`installOnApp(minPriority, formatStrategy)` overload is deprecated and retained for binary
-compatibility, but a strategy passed to it has already allocated its resources before duplicate
-installation can be detected.
+Keep `DiskLogStrategy.Builder().build()` inside the factory so repeated installation attempts do
+not allocate unused disk logging resources.
 
 Builder options:
 
